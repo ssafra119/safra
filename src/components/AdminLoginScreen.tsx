@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useFirebase } from '../context/FirebaseContext.tsx';
 import { normalizeAdminUsername, validateCompanyAdminCredentials } from '../utils/subscription.ts';
+import { resolveAppRoute } from '../utils/routes.ts';
 import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 interface AdminLoginScreenProps {
@@ -79,7 +80,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
       <div className="w-full max-w-md flex items-center justify-between mb-4 z-10 gap-2">
         <div className="flex items-center gap-2">
           <a
-            href="/index.html"
+            href={resolveAppRoute('catalog')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-white text-xs font-bold shadow-sm transition-all"
           >
             <span>کەتەلۆگێ فرۆشتنێ</span>

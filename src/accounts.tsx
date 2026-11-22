@@ -47,6 +47,7 @@ import {
 import { getStoredTheme, setStoredTheme } from './storage.ts';
 import type { UserAccount, UserRole } from './types.ts';
 import { normalizeEnglishDigits } from './utils/stock.ts';
+import { getCatalogPublicUrl, resolveAppRoute } from './utils/routes.ts';
 import {
   buildRepWhatsAppMessage,
   filterUserAccounts,
@@ -100,14 +101,27 @@ function SuperAdminLoginScreen({
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [unauthorizedHost, setUnauthorizedHost] = useState('');
 
   const handleClick = async () => {
     setLocalError('');
+    setUnauthorizedHost('');
     setIsSubmitting(true);
     try {
       await onLoginGoogle();
-    } catch {
-      setLocalError('چوونەژوور ب Google سەرنەکەفت، تکایە د تەبەکێ نووی دا دوبارە هەول بدە');
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code || '';
+      if (code === 'auth/unauthorized-domain') {
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        setUnauthorizedHost(host);
+        setLocalError(
+          `ئەڤ دۆمەینە (${host}) هێشتا د Firebase دا نەهاتیە رێگەپێدان (Authorized domains).`
+        );
+      } else if (code === 'auth/popup-blocked') {
+        setLocalError('پەنجەرەیا چوونەژوورێ (Popup) ژ لایێ براوزەری ڤە هاتە گرتن، تکایە ڕێگە بدە و دوبارە کلیک بکە.');
+      } else {
+        setLocalError('چوونەژوور ب Google سەرنەکەفت، تکایە د تەبەکێ نووی دا دوبارە هەول بدە');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -123,7 +137,7 @@ function SuperAdminLoginScreen({
       <div className="w-full max-w-md flex items-center justify-between mb-4 z-10 gap-2">
         <div className="flex items-center gap-2">
           <a
-            href="/index.html"
+            href={resolveAppRoute('catalog')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-white text-xs font-bold shadow-sm transition-all"
           >
             <span>کەتەلۆگێ فرۆشتنێ</span>
@@ -162,10 +176,31 @@ function SuperAdminLoginScreen({
         {err && (
           <div
             role="alert"
-            className="mb-4 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 text-xs font-bold flex items-start gap-2 text-right"
+            className="mb-4 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 text-xs font-bold space-y-2 text-right"
           >
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{err}</span>
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{err}</span>
+            </div>
+            {unauthorizedHost && (
+              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-red-200/70 dark:border-red-900/50 text-slate-700 dark:text-slate-200 font-normal space-y-1.5">
+                <p className="font-bold text-[11px]">
+                  د Firebase Console دا دۆمەینێ{' '}
+                  <span dir="ltr" className="font-mono text-[#0284c7]">
+                    {unauthorizedHost}
+                  </span>{' '}
+                  زێدە بکە:
+                </p>
+                <a
+                  href="https://console.firebase.google.com/project/cool-synthesizer-rkx2q/authentication/settings"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0284c7] hover:bg-sky-700 text-white text-[11px] font-bold transition-colors"
+                >
+                  <span>ڤەکرنا Authorized Domains</span>
+                </a>
+              </div>
+            )}
           </div>
         )}
 
@@ -212,7 +247,7 @@ function SuperAdminAccessDenied({
         )}
         <div className="flex flex-col sm:flex-row gap-2.5">
           <a
-            href="/index.html"
+            href={resolveAppRoute('catalog')}
             className="flex-1 py-2.5 px-4 rounded-2xl bg-[#0284c7] hover:bg-sky-700 text-white text-xs sm:text-sm font-bold text-center transition-all"
           >
             ڤەگەریان بۆ کەتەلۆگی
@@ -374,7 +409,7 @@ function AccountsDashboard({
         role: 'rep',
       });
 
-      const appUrl = window.location.origin;
+      const appUrl = getCatalogPublicUrl();
       const shareText = buildRepWhatsAppMessage({
         appUrl,
         name: cleanName,
@@ -437,7 +472,7 @@ function AccountsDashboard({
         password: adminPassword,
       });
 
-      const adminUrl = `${window.location.origin}/admin`;
+      const adminUrl = `${getCatalogPublicUrl()}admin.html`;
       const shareText = [
         `زانیاریێن پەنێلا کومگەها سەفرا (SAFRA Admin):`,
         `لینکێ کۆنتڕۆلا کومگەهێ: ${adminUrl}`,
@@ -584,7 +619,7 @@ function AccountsDashboard({
               <PWAInstallButton compact />
 
               <a
-                href="/admin"
+                href={resolveAppRoute('admin')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold transition-all shadow-sm"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-[#0284c7]" />
@@ -613,7 +648,7 @@ function AccountsDashboard({
               </button>
 
               <a
-                href="/index.html"
+                href={resolveAppRoute('catalog')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0284c7] hover:bg-sky-700 text-white text-xs font-bold transition-all shadow-sm"
               >
                 <span>کەتەلۆگ</span>

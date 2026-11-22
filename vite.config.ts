@@ -40,15 +40,21 @@ function cleanRoutesPlugin(): Plugin {
         const destHtml = path.join(targetDir, 'index.html');
         if (fs.existsSync(srcHtml)) {
           fs.mkdirSync(targetDir, { recursive: true });
-          fs.copyFileSync(srcHtml, destHtml);
+          const rawHtml = fs.readFileSync(srcHtml, 'utf8');
+          // Rewrite ./ assets/links/manifest so /admin/ and /safra/admin/ resolve parent dist files
+          const nestedHtml = rawHtml
+            .replace(/<script id="vite-plugin-pwa:register-sw"[^>]*><\/script>/g, '')
+            .replace(/(href|src)="\.\//g, '$1="../');
+          fs.writeFileSync(destHtml, nestedHtml, 'utf8');
         }
       }
     },
   };
 }
 
-export default defineConfig(() => {
+export default defineConfig(({ command }) => {
   return {
+    base: command === 'build' ? './' : '/',
     plugins: [
       cleanRoutesPlugin(),
       react(),
@@ -57,32 +63,31 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
         manifest: {
-          id: '/',
           name: 'سەفرا | SAFRA Wholesale',
           short_name: 'سەفرا',
           description: 'سەفرا - کەتەلۆگێ فرۆشتنێ بۆ بەرهەمێن شیرەمەنی، سناکس، و کەرەستەیێن پاقژکرنێ',
           theme_color: '#0284c7',
           background_color: '#f0f7ff',
           display: 'standalone',
-          start_url: '/',
-          scope: '/',
+          start_url: './',
+          scope: './',
           dir: 'rtl',
           lang: 'ku',
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: 'pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: 'pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: 'pwa-maskable-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',

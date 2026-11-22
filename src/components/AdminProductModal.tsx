@@ -104,7 +104,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setImages((prev) => [...prev, ...compressedUrls]);
     } catch (err) {
       console.error('Image compression failed:', err);
-      alert('خەلەتەک پەیدابوو د بارکرنا وێنەیان دا');
+      setErrors(['خەلەتەک پەیدابوو د بارکرنا وێنەیان دا']);
     } finally {
       setIsCompressing(false);
       e.target.value = '';

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, LogOut, Phone, ShieldAlert } from 'lucide-react';
 import { SUBSCRIPTION_BLOCKED_MESSAGE, useFirebase } from '../context/FirebaseContext.tsx';
+import { resolveAppRoute } from '../utils/routes.ts';
 
 interface SubscriptionLockScreenProps {
   message?: string;
@@ -51,7 +52,7 @@ export const SubscriptionLockScreen: React.FC<SubscriptionLockScreenProps> = ({
         <div className="flex flex-col sm:flex-row gap-2.5">
           {showBackToCatalog && (
             <a
-              href="/index.html"
+              href={resolveAppRoute('catalog')}
               className="flex-1 py-2.5 px-4 rounded-2xl bg-[#0284c7] hover:bg-sky-700 text-white text-xs sm:text-sm font-bold text-center transition-all"
             >
               ڤەگەریان بۆ کەتەلۆگی

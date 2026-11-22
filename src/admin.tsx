@@ -36,6 +36,7 @@ import {
   getInitialProducts,
 } from './storage.ts';
 import { filterProducts, formatPriceNumber, formatStockStatus } from './utils/stock.ts';
+import { resolveAppRoute } from './utils/routes.ts';
 import { AdminCategoryModal } from './components/AdminCategoryModal.tsx';
 import { AdminProductModal } from './components/AdminProductModal.tsx';
 import { AdminLoginScreen } from './components/AdminLoginScreen.tsx';
@@ -366,7 +367,7 @@ function AdminDashboard({ theme, toggleTheme }: AdminAppProps) {
                 </button>
 
                 <a
-                  href="/index.html"
+                  href={resolveAppRoute('catalog')}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0284c7] hover:bg-sky-700 text-white text-xs font-bold transition-all shadow-sm"
                 >
                   <span>کەتەلۆگێ فرۆشتنێ</span>

@@ -15,6 +15,7 @@ import {
   adminUsernameToEmail,
   validateCompanyAdminCredentials,
 } from './subscription.ts';
+import { getCatalogPublicUrl, resolveAppRoute } from './routes.ts';
 import type { UserAccount } from '../types.ts';
 
 test('normalizePhone and phoneToAuthEmail clean Kurdish/Arabic digits and formatting', () => {
@@ -155,3 +156,25 @@ test('company admin username normalization and validation helpers work cleanly',
   });
 });
 
+test('resolveAppRoute and getCatalogPublicUrl work on both root and /safra/ subpath deployments', () => {
+  assert.equal(resolveAppRoute('catalog', '/'), './');
+  assert.equal(resolveAppRoute('catalog', '/safra/'), './');
+  assert.equal(resolveAppRoute('catalog', '/safra/admin.html'), './');
+  assert.equal(resolveAppRoute('catalog', '/safra/admin/'), '../');
+  assert.equal(resolveAppRoute('catalog', '/accounts/'), '../');
+  assert.equal(resolveAppRoute('admin', '/safra/accounts.html'), './admin.html');
+  assert.equal(resolveAppRoute('admin', '/safra/accounts/'), '../admin.html');
+
+  assert.equal(
+    getCatalogPublicUrl('https://ssafra119.github.io/safra/accounts.html'),
+    'https://ssafra119.github.io/safra/'
+  );
+  assert.equal(
+    getCatalogPublicUrl('https://ssafra119.github.io/safra/accounts/'),
+    'https://ssafra119.github.io/safra/'
+  );
+  assert.equal(
+    getCatalogPublicUrl('https://example.com/accounts'),
+    'https://example.com/'
+  );
+});

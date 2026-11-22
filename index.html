@@ -10,8 +10,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="سەفرا" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
     <meta property="og:title" content="سەفرا | کەتەلۆگێ فرۆشتنێ - SAFRA Wholesale" />
     <meta property="og:description" content="سەفرا - کەتەلۆگێ فرۆشتنێ و کۆنتڕۆلا کومگەهێ بۆ بەرهەمێن شیرەمەنی، سناکس، و کەرەستەیێن پاقژکرنێ" />
     <meta property="og:type" content="website" />
@@ -23,12 +23,12 @@
       (function() {
         try {
           var p = window.location.pathname;
-          if (p === '/admin' || p === '/admin/') {
-            window.location.replace('/admin.html' + window.location.search);
+          if (/\/admin\/?$/.test(p)) {
+            window.location.replace(p.replace(/\/admin\/?$/, '/admin.html') + window.location.search);
             return;
           }
-          if (p === '/accounts' || p === '/accounts/') {
-            window.location.replace('/accounts.html' + window.location.search);
+          if (/\/accounts\/?$/.test(p)) {
+            window.location.replace(p.replace(/\/accounts\/?$/, '/accounts.html') + window.location.search);
             return;
           }
         } catch (e) {}
