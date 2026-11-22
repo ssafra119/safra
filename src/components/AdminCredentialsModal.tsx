@@ -36,11 +36,6 @@ export const AdminCredentialsModal: React.FC<AdminCredentialsModalProps> = ({
       return;
     }
 
-    if (newPassword && newPassword.length < 6) {
-      setErrorMsg('پاسوۆردێ نووی پێتڤیە کێمترین 6 پیت یان ژمارە بن');
-      return;
-    }
-
     if (newPassword && newPassword !== confirmPassword) {
       setErrorMsg('پاسوۆردێ نووی و دووپاتکرن وەک ئێک نینن!');
       return;
@@ -194,7 +189,7 @@ export const AdminCredentialsModal: React.FC<AdminCredentialsModalProps> = ({
               htmlFor="admin-new-pass"
               className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1"
             >
-              پاسوۆردێ نووی (کێمترین 6 پیت یان ژمارە)
+              پاسوۆردێ نووی
             </label>
             <input
               id="admin-new-pass"

@@ -26,7 +26,7 @@ interface PhonePinLoginScreenProps {
 
 export const PhonePinLoginScreen: React.FC<PhonePinLoginScreenProps> = ({
   title = 'چوونەژوور بۆ کەتەلۆگێ سەفرا',
-  subtitle = 'ژمارەیا موبایلێ و کۆدێ 6 ژمارەیی (PIN) بنڤیسە',
+  subtitle = 'ژمارەیا موبایلێ و پاسوۆردێ خۆ بنڤیسە',
   theme,
   onToggleTheme,
   backHref,
@@ -48,15 +48,15 @@ export const PhonePinLoginScreen: React.FC<PhonePinLoginScreenProps> = ({
     clearAuthError();
 
     const cleanPhone = normalizePhone(phone);
-    const cleanPin = normalizeEnglishDigits(pin).replace(/[^0-9]/g, '');
+    const cleanPin = normalizeEnglishDigits(pin).trim();
 
     if (cleanPhone.length < 7) {
       setLocalError('هیڤیدارین ژمارەیا موبایلێ ب دروستی بنڤیسە');
       return;
     }
 
-    if (cleanPin.length < 6) {
-      setLocalError('کۆدێ نهێنی (PIN) پێتڤیە 6 ژمارە بیت');
+    if (cleanPin.length < 1) {
+      setLocalError('تکایە پاسوۆرد یان کۆدێ خۆ بنڤیسە');
       return;
     }
 
@@ -70,11 +70,11 @@ export const PhonePinLoginScreen: React.FC<PhonePinLoginScreenProps> = ({
         code === 'auth/wrong-password' ||
         code === 'auth/user-not-found'
       ) {
-        setLocalError('ژمارەیا موبایلێ یان کۆدێ نهێنی (PIN) خەلەتە!');
+        setLocalError('ژمارەیا موبایلێ یان پاسوۆرد خەلەتە!');
       } else if (code === 'auth/too-many-requests') {
         setLocalError('گەلەک هەولدان هاتنە کرن، پاش چەند خولەکان دوبارە هەول بدە');
       } else if (code === 'auth/operation-not-allowed') {
-        setLocalError('پێدڤیە چوونەژوور ب Email/Password د Firebase Console دا بهێتە چالاککرن');
+        setLocalError('چوونەژوور ب ژمارە و پاسوۆردی ژلایێ ڕێڤەبەری ڤە نەهاتیە چالاککرن');
       } else {
         setLocalError('چوونەژوور سەرنەکەفت، دوبارە هەول بدە');
       }
@@ -165,13 +165,13 @@ export const PhonePinLoginScreen: React.FC<PhonePinLoginScreenProps> = ({
             </div>
           </div>
 
-          {/* 6-digit PIN */}
+          {/* Password / PIN */}
           <div>
             <label
               htmlFor="login-pin-input"
               className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5"
             >
-              کۆدێ نهێنی (6 ژمارە PIN)
+              پاسوۆرد / کۆدێ نهێنی
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
@@ -180,22 +180,18 @@ export const PhonePinLoginScreen: React.FC<PhonePinLoginScreenProps> = ({
               <input
                 id="login-pin-input"
                 type={showPin ? 'text' : 'password'}
-                inputMode="numeric"
                 dir="ltr"
-                maxLength={6}
                 autoComplete="current-password"
                 required
                 value={pin}
-                onChange={(e) =>
-                  setPin(normalizeEnglishDigits(e.target.value).replace(/[^0-9]/g, '').slice(0, 6))
-                }
+                onChange={(e) => setPin(normalizeEnglishDigits(e.target.value))}
                 placeholder="••••••"
                 className="w-full pr-10 pl-10 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-mono tracking-widest text-right text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
               />
               <button
                 type="button"
                 onClick={() => setShowPin((prev) => !prev)}
-                aria-label={showPin ? 'ڤەشارتنا کۆدی' : 'دیارکرنا کۆدی'}
+                aria-label={showPin ? 'ڤەشارتنا پاسوۆردی' : 'دیارکرنا پاسوۆردی'}
                 className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

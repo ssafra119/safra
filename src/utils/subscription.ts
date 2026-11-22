@@ -19,6 +19,20 @@ export function phoneToAuthEmail(phone: string): string {
 }
 
 /**
+ * Normalizes a PIN or password (including Kurdish/Arabic digits) and transparently
+ * wraps short secrets (< 6 chars, e.g. "1") so Firebase Auth accepts them seamlessly
+ * while keeping >= 6 char secrets unchanged for full backwards compatibility.
+ */
+export function toFirebaseAuthPassword(rawSecret: string): string {
+  const normalized = normalizeEnglishDigits(String(rawSecret ?? '')).trim();
+  if (!normalized) return '';
+  if (normalized.length >= 6) {
+    return normalized;
+  }
+  return `safra#${normalized}`;
+}
+
+/**
  * Generates a random 6-digit PIN string (100000 - 999999).
  */
 export function generateSixDigitPin(): string {
@@ -172,11 +186,11 @@ export function validateCompanyAdminCredentials(
       error: 'ناڤێ بەکارهێنەری پێتڤیە کێمترین 3 پیت یان ژمارەیێن ئینگلیزی بن',
     };
   }
-  if (!password || password.length < 6) {
+  if (!password || password.trim().length < 1) {
     return {
       valid: false,
       cleanUsername,
-      error: 'پاسوۆرد پێتڤیە کێمترین 6 پیت یان ژمارە بن',
+      error: 'تکایە پاسوۆردی بنڤیسە',
     };
   }
   return { valid: true, cleanUsername };

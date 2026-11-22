@@ -82,7 +82,7 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         title="چوونەژوور بۆ کەتەلۆگێ سەفرا"
-        subtitle="ژمارەیا موبایلێ و کۆدێ 6 ژمارەیی (PIN) بنڤیسە"
+        subtitle="ژمارەیا موبایلێ و پاسوۆرد یان کۆدێ نهێنی بنڤیسە"
       />
     );
   }

@@ -25,15 +25,54 @@ function openDeviceDb(): Promise<IDBDatabase> {
       reject(new Error('IndexedDB not supported'));
       return;
     }
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) {
-        db.createObjectStore(IDB_STORE);
+    let settled = false;
+    const timer = window.setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('IndexedDB open timeout'));
       }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error || new Error('Failed to open IndexedDB'));
+    }, 1500);
+
+    try {
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => {
+        window.clearTimeout(timer);
+        if (!settled) {
+          settled = true;
+          resolve(req.result);
+        } else {
+          try {
+            req.result.close();
+          } catch {}
+        }
+      };
+      req.onerror = () => {
+        window.clearTimeout(timer);
+        if (!settled) {
+          settled = true;
+          reject(req.error || new Error('Failed to open IndexedDB'));
+        }
+      };
+      req.onblocked = () => {
+        window.clearTimeout(timer);
+        if (!settled) {
+          settled = true;
+          reject(new Error('IndexedDB blocked'));
+        }
+      };
+    } catch (err) {
+      window.clearTimeout(timer);
+      if (!settled) {
+        settled = true;
+        reject(err);
+      }
+    }
   });
 }
 
@@ -41,18 +80,34 @@ async function readFromIdb(): Promise<string | null> {
   try {
     const db = await openDeviceDb();
     return await new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const store = tx.objectStore(IDB_STORE);
-      const getReq = store.get(IDB_KEY);
-      getReq.onsuccess = () => {
-        const val = typeof getReq.result === 'string' ? getReq.result : null;
-        db.close();
-        resolve(val);
-      };
-      getReq.onerror = () => {
-        db.close();
+      const timer = window.setTimeout(() => {
+        try {
+          db.close();
+        } catch {}
         resolve(null);
-      };
+      }, 1500);
+      try {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const store = tx.objectStore(IDB_STORE);
+        const getReq = store.get(IDB_KEY);
+        getReq.onsuccess = () => {
+          window.clearTimeout(timer);
+          const val = typeof getReq.result === 'string' ? getReq.result : null;
+          db.close();
+          resolve(val);
+        };
+        getReq.onerror = () => {
+          window.clearTimeout(timer);
+          db.close();
+          resolve(null);
+        };
+      } catch {
+        window.clearTimeout(timer);
+        try {
+          db.close();
+        } catch {}
+        resolve(null);
+      }
     });
   } catch {
     return null;
@@ -63,17 +118,33 @@ async function writeToIdb(deviceId: string): Promise<void> {
   try {
     const db = await openDeviceDb();
     await new Promise<void>((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      const store = tx.objectStore(IDB_STORE);
-      store.put(deviceId, IDB_KEY);
-      tx.oncomplete = () => {
-        db.close();
+      const timer = window.setTimeout(() => {
+        try {
+          db.close();
+        } catch {}
         resolve();
-      };
-      tx.onerror = () => {
-        db.close();
+      }, 1500);
+      try {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        const store = tx.objectStore(IDB_STORE);
+        store.put(deviceId, IDB_KEY);
+        tx.oncomplete = () => {
+          window.clearTimeout(timer);
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          window.clearTimeout(timer);
+          db.close();
+          resolve();
+        };
+      } catch {
+        window.clearTimeout(timer);
+        try {
+          db.close();
+        } catch {}
         resolve();
-      };
+      }
     });
   } catch {
     // Ignore IDB errors in restricted browser modes

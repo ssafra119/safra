@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
 import path from 'path';
 import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -30,6 +31,18 @@ function cleanRoutesPlugin(): Plugin {
         req.url = rewrite(req.url);
         next();
       });
+    },
+    closeBundle() {
+      const distDir = path.resolve(__dirname, 'dist');
+      for (const page of ['admin', 'accounts']) {
+        const srcHtml = path.join(distDir, `${page}.html`);
+        const targetDir = path.join(distDir, page);
+        const destHtml = path.join(targetDir, 'index.html');
+        if (fs.existsSync(srcHtml)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+          fs.copyFileSync(srcHtml, destHtml);
+        }
+      }
     },
   };
 }
@@ -77,7 +90,10 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          globPatterns: [],
+          cleanupOutdatedCaches: true,
+          skipWaiting: true,
+          clientsClaim: true,
           navigateFallback: null,
           runtimeCaching: [
             {

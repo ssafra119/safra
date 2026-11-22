@@ -60,7 +60,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
       } else if (code === 'auth/too-many-requests') {
         setLocalError('گەلەک هەولدان هاتنە کرن، پاش چەند خولەکان دوبارە هەول بدە');
       } else if (code === 'auth/operation-not-allowed') {
-        setLocalError('پێتڤیە چوونەژوور ب Email/Password د Firebase Console دا بهێتە چالاککرن');
+        setLocalError('پێتڤیە د Firebase Console دا چوونەژوور ب پاسوۆرد بهێتە چالاککرن (پەیوەندیێ ب سەرپەرشتیاری بکە)');
       } else {
         setLocalError('چوونەژوور سەرنەکەفت، دوبارە هەول بدە');
       }

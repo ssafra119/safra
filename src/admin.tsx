@@ -44,6 +44,7 @@ import { PullToRefresh } from './components/PullToRefresh.tsx';
 import { SubscriptionLockScreen } from './components/SubscriptionLockScreen.tsx';
 import { PWAInstallButton } from './components/PWAInstallButton.tsx';
 import { FirebaseProvider, useFirebase } from './context/FirebaseContext.tsx';
+import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
 import {
   syncProductToFirestore,
   deleteProductFromFirestore,
@@ -854,5 +855,9 @@ function AdminRoot() {
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
-  createRoot(rootEl).render(<AdminRoot />);
+  createRoot(rootEl).render(
+    <AppErrorBoundary>
+      <AdminRoot />
+    </AppErrorBoundary>
+  );
 }

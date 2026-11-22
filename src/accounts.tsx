@@ -59,6 +59,7 @@ import {
   validateCompanyAdminCredentials,
 } from './utils/subscription.ts';
 import { PWAInstallButton } from './components/PWAInstallButton.tsx';
+import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
 
 interface CreatedSummary {
   kind: 'rep' | 'admin';
@@ -149,7 +150,10 @@ function SuperAdminLoginScreen({
           <ShieldCheck className="w-8 h-8" />
         </div>
         <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mb-1">
-          پەنێلا سەرپەرشتیارێ گشتی (Super Admin)
+          پەنێلا سەرپەرشتیارێ گشتی{' '}
+          <span dir="ltr" className="inline-block whitespace-nowrap">
+            (Super Admin)
+          </span>
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-6 leading-relaxed">
           بتنێ بۆ خاوەنێ سیستەمی — ڕێڤەبرنا حسابێن نوینەران، بەشداریان و ئەدمینێ کومگەهێ
@@ -262,6 +266,7 @@ function AccountsDashboard({
 
   const [isCreating, setIsCreating] = useState(false);
   const [formError, setFormError] = useState('');
+  const [needsProviderSetup, setNeedsProviderSetup] = useState(false);
 
   // Created Share Card
   const [createdSummary, setCreatedSummary] = useState<CreatedSummary | null>(null);
@@ -338,10 +343,11 @@ function AccountsDashboard({
   const handleCreateRep = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setNeedsProviderSetup(false);
 
     const cleanName = repName.trim();
     const cleanPhone = normalizePhone(repPhone);
-    const cleanPin = normalizeEnglishDigits(repPin).replace(/[^0-9]/g, '');
+    const cleanPin = normalizeEnglishDigits(repPin).trim();
     const parsedDays = Math.max(1, parseInt(normalizeEnglishDigits(repDays) || '30', 10) || 30);
 
     if (!cleanName) {
@@ -352,8 +358,8 @@ function AccountsDashboard({
       setFormError('هیڤیدارین ژمارەیا موبایلێ ب دروستی بنڤیسە');
       return;
     }
-    if (cleanPin.length < 6) {
-      setFormError('کۆدێ نهێنی (PIN) پێتڤیە 6 ژمارە بیت');
+    if (cleanPin.length < 1) {
+      setFormError('تکایە پاسوۆرد یان کۆدێ نهێنی بنڤیسە (نموونە: 1 یان 123456)');
       return;
     }
 
@@ -382,7 +388,7 @@ function AccountsDashboard({
         name: cleanName,
         identifierLabel: 'ژمارەیا موبایلێ:',
         identifierValue: cleanPhone,
-        secretLabel: 'کۆدێ نهێنی (PIN):',
+        secretLabel: 'پاسوۆرد / کۆدێ نهێنی:',
         secretValue: cleanPin,
         durationLabel: `${parsedDays} ڕۆژ`,
         shareText,
@@ -400,7 +406,10 @@ function AccountsDashboard({
       if (code === 'auth/email-already-in-use') {
         setFormError('ئەڤ ژمارەیا موبایلێ بەرێ د سیستەمیدا هاتیە تۆمارکرن!');
       } else if (code === 'auth/operation-not-allowed') {
-        setFormError('پێتڤیە Email/Password د Firebase Console دا بهێتە چالاککرن');
+        setNeedsProviderSetup(true);
+        setFormError(
+          'بتنێ بۆ ئێکەمجار پێتڤیە د Firebase Console دا چوونەژوور ب ژمارە/پاسوۆرد بهێتە ڤەکرن (دوگمەیا خوارێ کلیک بکە).'
+        );
       } else {
         setFormError(msg || 'دروستکرنا حسابی سەرنەکەفت، دوبارە هەول بدە');
       }
@@ -412,6 +421,7 @@ function AccountsDashboard({
   const handleCreateCompanyAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setNeedsProviderSetup(false);
 
     const validation = validateCompanyAdminCredentials(adminUsername, adminPassword);
     if (!validation.valid) {
@@ -457,7 +467,10 @@ function AccountsDashboard({
       if (code === 'auth/email-already-in-use') {
         setFormError('ئەڤ ناڤێ بەکارهێنەری بەرێ هەیە! ناڤەکێ دی هەلبژێرە');
       } else if (code === 'auth/operation-not-allowed') {
-        setFormError('پێتڤیە Email/Password د Firebase Console دا بهێتە چالاککرن');
+        setNeedsProviderSetup(true);
+        setFormError(
+          'بتنێ بۆ ئێکەمجار پێتڤیە د Firebase Console دا چوونەژوور ب ژمارە/پاسوۆرد بهێتە ڤەکرن (دوگمەیا خوارێ کلیک بکە).'
+        );
       } else {
         setFormError(msg || 'دروستکرنا حسابێ ئەدمینی سەرنەکەفت');
       }
@@ -688,10 +701,36 @@ function AccountsDashboard({
             {formError && (
               <div
                 role="alert"
-                className="mb-4 p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 text-xs font-bold flex items-center gap-2"
+                className="mb-4 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 text-xs font-bold space-y-2"
               >
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{formError}</span>
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+                {needsProviderSetup && (
+                  <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-red-200/70 dark:border-red-900/50 text-slate-700 dark:text-slate-200 font-normal space-y-1.5">
+                    <p className="font-bold text-[11px]">
+                      چالاککرن بتنێ 5 چرکەیە (بۆ ئێکەمجار):
+                    </p>
+                    <ol className="list-decimal list-inside text-[11px] space-y-0.5">
+                      <li>کلیک ل سەر دوگمەیا خوارێ بکە.</li>
+                      <li>
+                        د وی پەڕەی دا <span className="font-mono font-bold">Email/Password</span> ڤەکە و{' '}
+                        <span className="font-mono font-bold">Enable</span> و{' '}
+                        <span className="font-mono font-bold">Save</span> بکە.
+                      </li>
+                      <li>دوبارە ل ڤێرە تنێ ژمارا موبایلێ و پاسوۆردی بنڤیسە!</li>
+                    </ol>
+                    <a
+                      href="https://console.firebase.google.com/project/cool-synthesizer-rkx2q/authentication/providers"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-xl bg-[#0284c7] hover:bg-sky-700 text-white text-[11px] font-bold transition-colors"
+                    >
+                      <span>ڤەکرنا Firebase Authentication</span>
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 
@@ -743,24 +782,17 @@ function AccountsDashboard({
                       htmlFor="rep-pin-input"
                       className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1"
                     >
-                      کۆدێ 6 ژمارەیی (PIN) *
+                      پاسوۆرد / کۆدێ نهێنی (تەنانەت 1 ژمارە) *
                     </label>
                     <div className="flex gap-1.5">
                       <input
                         id="rep-pin-input"
                         type="text"
-                        inputMode="numeric"
                         dir="ltr"
-                        maxLength={6}
                         required
                         value={repPin}
-                        onChange={(e) =>
-                          setRepPin(
-                            normalizeEnglishDigits(e.target.value)
-                              .replace(/[^0-9]/g, '')
-                              .slice(0, 6)
-                          )
-                        }
+                        onChange={(e) => setRepPin(normalizeEnglishDigits(e.target.value))}
+                        placeholder="1 یان 123456"
                         className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-mono font-bold text-center tracking-widest text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
                       />
                       <button
@@ -894,17 +926,16 @@ function AccountsDashboard({
                     htmlFor="company-admin-password"
                     className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1"
                   >
-                    پاسوۆرد (Password - کێمترین 6 پیت یان ژمارە) *
+                    پاسوۆرد (Password) *
                   </label>
                   <input
                     id="company-admin-password"
                     type="text"
                     dir="ltr"
                     required
-                    minLength={6}
                     value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="نموونە: safra2025"
+                    onChange={(e) => setAdminPassword(normalizeEnglishDigits(e.target.value))}
+                    placeholder="نموونە: 1 یان safra2025"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-mono text-right text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
                   />
                 </div>
@@ -1270,7 +1301,12 @@ function AccountsRoot() {
   };
 
   useEffect(() => {
+    const authTimeout = window.setTimeout(() => {
+      setAuthReady(true);
+    }, 5000);
+
     const unsub = onAuthStateChanged(superAuth, (currentUser) => {
+      window.clearTimeout(authTimeout);
       setUser(currentUser);
       if (!currentUser) {
         setUserProfile(null);
@@ -1280,7 +1316,10 @@ function AccountsRoot() {
       }
       setAuthReady(true);
     });
-    return () => unsub();
+    return () => {
+      window.clearTimeout(authTimeout);
+      unsub();
+    };
   }, []);
 
   useEffect(() => {
@@ -1373,5 +1412,9 @@ function AccountsRoot() {
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
-  createRoot(rootEl).render(<AccountsRoot />);
+  createRoot(rootEl).render(
+    <AppErrorBoundary>
+      <AccountsRoot />
+    </AppErrorBoundary>
+  );
 }

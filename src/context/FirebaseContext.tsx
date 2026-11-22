@@ -102,7 +102,12 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     getOrCreateDeviceId().then((id) => setDeviceId(id));
 
+    const authFailsafe = window.setTimeout(() => {
+      setAuthReady(true);
+    }, 5000);
+
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      window.clearTimeout(authFailsafe);
       setUser(currentUser);
       if (!currentUser) {
         setUserProfile(null);
@@ -122,6 +127,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, 15_000);
 
     return () => {
+      window.clearTimeout(authFailsafe);
       unsubscribeAuth();
       window.clearInterval(timer);
     };

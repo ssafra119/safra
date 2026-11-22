@@ -67,14 +67,19 @@ export function subscribeToStorageChanges(callback: () => void): () => void {
   };
 }
 
-export function saveProducts(products: Product[]): void {
+function safeSetItem(key: string, value: string): boolean {
   try {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-    broadcastSync('products');
+    localStorage.setItem(key, value);
+    return true;
   } catch (err) {
-    console.error('Failed to save products to localStorage:', err);
-    throw err;
+    console.warn(`Could not write ${key} to localStorage:`, err);
+    return false;
   }
+}
+
+export function saveProducts(products: Product[]): void {
+  safeSetItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+  broadcastSync('products');
 }
 
 export function getInitialCategories(): Category[] {
@@ -82,7 +87,7 @@ export function getInitialCategories(): Category[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
+      safeSetItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
       return INITIAL_CATEGORIES;
     }
     const parsed = JSON.parse(raw);
@@ -91,30 +96,20 @@ export function getInitialCategories(): Category[] {
     }
     return INITIAL_CATEGORIES;
   } catch (err) {
-    console.error('Failed to read categories from localStorage:', err);
+    console.warn('Failed to read categories from localStorage:', err);
     return INITIAL_CATEGORIES;
   }
 }
 
 export function saveCategories(categories: Category[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-    broadcastSync('categories');
-  } catch (err) {
-    console.error('Failed to save categories to localStorage:', err);
-    throw err;
-  }
+  safeSetItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+  broadcastSync('categories');
 }
 
 export function saveCategoriesAndProducts(categories: Category[], products: Product[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-    broadcastSync('all');
-  } catch (err) {
-    console.error('Failed to save categories and products:', err);
-    throw err;
-  }
+  safeSetItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+  safeSetItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+  broadcastSync('all');
 }
 
 export function exportBackupData(): SafraBackup {
@@ -158,7 +153,7 @@ export function importBackupData(jsonString: string): { success: boolean; count:
     saveProducts(data.products);
 
     return { success: true, count: data.products.length };
-  } catch (err) {
+  } catch {
     return { success: false, count: 0, error: 'خاندنا فایلی سەرنەکەفت (JSON Error)' };
   }
 }
@@ -170,16 +165,31 @@ export function resetToSeedData(): void {
 
 export function getStoredTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light';
-  const saved = localStorage.getItem(STORAGE_KEYS.THEME);
-  if (saved === 'dark' || saved === 'light') return saved;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.THEME);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {
+    // Ignore SecurityError when third-party/private storage is blocked
+  }
+  try {
+    return typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+  } catch {
+    return 'light';
+  }
 }
 
 export function setStoredTheme(theme: 'light' | 'dark'): void {
-  localStorage.setItem(STORAGE_KEYS.THEME, theme);
-  if (theme === 'dark') {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
+  safeSetItem(STORAGE_KEYS.THEME, theme);
+  try {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  } catch {
+    // Ignore DOM errors
   }
 }

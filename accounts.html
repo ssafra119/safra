@@ -22,17 +22,96 @@
       (function() {
         try {
           const theme = localStorage.getItem('safra_wholesale_theme_v1');
-          if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          if (theme === 'dark' || (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
           } else {
             document.documentElement.classList.remove('dark');
           }
         } catch (e) {}
+
+        try {
+          if ('caches' in window) {
+            window.caches.keys().then(function(keys) {
+              keys.forEach(function(k) {
+                if (k.indexOf('workbox-precache') !== -1 || k.indexOf('safra-pages-cache') !== -1) {
+                  window.caches.delete(k);
+                }
+              });
+            });
+          }
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              regs.forEach(function(r) { r.update().catch(function(){}); });
+            });
+          }
+        } catch (e) {}
+
+        var recoverKey = 'safra_asset_recover_v2';
+        function showBootFallback() {
+          var fallback = document.getElementById('safra-boot-fallback');
+          if (fallback) fallback.style.display = 'block';
+        }
+        function clearSwAndReload() {
+          try {
+            if (sessionStorage.getItem(recoverKey) === '1') {
+              showBootFallback();
+              return;
+            }
+            sessionStorage.setItem(recoverKey, '1');
+          } catch (e) {}
+          var tasks = [];
+          try {
+            if ('serviceWorker' in navigator) {
+              tasks.push(
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  return Promise.all(regs.map(function(r) { return r.unregister(); }));
+                })
+              );
+            }
+          } catch (e) {}
+          try {
+            if ('caches' in window) {
+              tasks.push(
+                window.caches.keys().then(function(keys) {
+                  return Promise.all(keys.map(function(k) { return window.caches.delete(k); }));
+                })
+              );
+            }
+          } catch (e) {}
+          Promise.all(tasks).finally(function() {
+            window.location.reload();
+          });
+        }
+
+        window.addEventListener('vite:preloadError', clearSwAndReload);
+        window.addEventListener('error', function(e) {
+          var t = e && e.target;
+          if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK')) {
+            var url = t.src || t.href || '';
+            if (url.indexOf('/assets/') !== -1 || url.indexOf('/src/') !== -1) {
+              clearSwAndReload();
+            }
+            return;
+          }
+          showBootFallback();
+        }, true);
+        window.addEventListener('unhandledrejection', showBootFallback);
+
+        window.setTimeout(showBootFallback, 4000);
       })();
     </script>
   </head>
   <body class="bg-[#f0f7ff] dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-['Vazirmatn',system-ui,sans-serif] antialiased selection:bg-sky-500 selection:text-white">
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;font-family:Vazirmatn,system-ui,sans-serif;">
+        <div style="width:48px;height:48px;border-radius:14px;background:#0284c7;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;margin-bottom:12px;box-shadow:0 8px 20px rgba(2,132,199,0.25);">س</div>
+        <div style="font-size:15px;font-weight:800;color:#0284c7;">پەنێلا حسابان دهێتە بارکرن...</div>
+        <div id="safra-boot-fallback" style="display:none;margin-top:16px;max-width:300px;">
+          <p style="font-size:12px;color:#64748b;margin-bottom:10px;">ئەگەر بارکرن درێژ بوو، کلیک بکە دا کاشێ براوزەری بهێتە پاکژکرن.</p>
+          <button type="button" onclick="(function(){try{sessionStorage.removeItem('safra_asset_recover_v2')}catch(e){}if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(r){return Promise.all(r.map(function(x){return x.unregister()}))}).catch(function(){})}if('caches' in window){caches.keys().then(function(k){return Promise.all(k.map(function(n){return caches.delete(n)}))}).finally(function(){location.reload()})}else{location.reload()}})()" style="padding:10px 18px;border-radius:12px;background:#0284c7;color:#fff;border:none;font-weight:700;font-size:13px;cursor:pointer;">نویکرن و پاکژکرنا کاشی</button>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/accounts.tsx"></script>
   </body>
 </html>

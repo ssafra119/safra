@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/admin/", "destination": "/admin.html" },
+    { "source": "/accounts", "destination": "/accounts.html" },
+    { "source": "/accounts/", "destination": "/accounts.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*\\.html|sw\\.js|registerSW\\.js)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ]
+}

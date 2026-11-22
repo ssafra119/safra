@@ -29,11 +29,11 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import type { Category, Product, UserAccount, UserRole } from './types.ts';
-import { normalizeEnglishDigits } from './utils/stock.ts';
 import {
   adminUsernameToEmail,
   normalizePhone,
   phoneToAuthEmail,
+  toFirebaseAuthPassword,
   validateCompanyAdminCredentials,
 } from './utils/subscription.ts';
 
@@ -127,26 +127,27 @@ export async function testConnection(targetDb: Firestore = db): Promise<boolean>
   }
 }
 
-// Sales Rep login: Phone + 6-digit PIN
+// Sales Rep login: Phone + PIN/Password
 export async function loginWithPhonePin(phone: string, pin: string): Promise<User> {
   const email = phoneToAuthEmail(phone);
-  const cleanPin = normalizeEnglishDigits(pin).trim();
+  const authPassword = toFirebaseAuthPassword(pin);
   if (!email) {
     throw new Error('INVALID_PHONE');
   }
   await setPersistence(auth, browserLocalPersistence);
-  const result = await signInWithEmailAndPassword(auth, email, cleanPin);
+  const result = await signInWithEmailAndPassword(auth, email, authPassword);
   return result.user;
 }
 
 // Company Admin login (/admin): Username + Password
 export async function loginCompanyAdmin(username: string, password: string): Promise<User> {
   const email = adminUsernameToEmail(username);
+  const authPassword = toFirebaseAuthPassword(password);
   if (!email) {
     throw new Error('INVALID_USERNAME');
   }
   await setPersistence(auth, browserLocalPersistence);
-  const result = await signInWithEmailAndPassword(auth, email, password);
+  const result = await signInWithEmailAndPassword(auth, email, authPassword);
   return result.user;
 }
 
@@ -161,14 +162,14 @@ export async function updateCompanyAdminProfileAndPassword(params: {
     throw new Error('ناڤێ ئەدمینی نەهاتە دیتن، تکایە دوبارە بچۆ ژوور');
   }
 
-  const credential = EmailAuthProvider.credential(currentUser.email, params.currentPassword);
+  const credential = EmailAuthProvider.credential(
+    currentUser.email,
+    toFirebaseAuthPassword(params.currentPassword)
+  );
   await reauthenticateWithCredential(currentUser, credential);
 
   if (params.newPassword && params.newPassword.trim().length > 0) {
-    if (params.newPassword.length < 6) {
-      throw new Error('پاسوۆردێ نووی پێتڤیە کێمترین 6 پیت یان ژمارە بن');
-    }
-    await updatePassword(currentUser, params.newPassword);
+    await updatePassword(currentUser, toFirebaseAuthPassword(params.newPassword));
   }
 
   if (params.newDisplayName && params.newDisplayName.trim().length > 0) {
@@ -296,14 +297,14 @@ export async function createRepAccountInFirebase(params: {
   role: UserRole;
 }): Promise<{ uid: string; cleanPhone: string }> {
   const cleanPhone = normalizePhone(params.phone);
-  const cleanPin = normalizeEnglishDigits(params.pin).trim();
+  const authPassword = toFirebaseAuthPassword(params.pin);
   const email = phoneToAuthEmail(cleanPhone);
 
   if (!email || cleanPhone.length < 7) {
     throw new Error('ژمارەیا موبایلێ نادروستە');
   }
-  if (cleanPin.length < 6) {
-    throw new Error('کۆدێ نهێنی (PIN) پێتڤیە 6 ژمارە بیت');
+  if (!authPassword) {
+    throw new Error('تکایە پاسوۆرد یان کۆدەکێ بنڤیسە');
   }
 
   const secondaryApp =
@@ -312,7 +313,7 @@ export async function createRepAccountInFirebase(params: {
 
   let createdUid = '';
   try {
-    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, cleanPin);
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, authPassword);
     createdUid = cred.user.uid;
   } finally {
     await signOut(secondaryAuth).catch(() => {});
@@ -356,13 +357,14 @@ export async function createCompanyAdminInFirebase(params: {
   }
 
   const email = adminUsernameToEmail(check.cleanUsername);
+  const authPassword = toFirebaseAuthPassword(params.password);
   const secondaryApp =
     getApps().find((a) => a.name === 'Secondary') ?? initializeApp(firebaseConfig, 'Secondary');
   const secondaryAuth = getAuth(secondaryApp);
 
   let createdUid = '';
   try {
-    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, params.password);
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, authPassword);
     createdUid = cred.user.uid;
   } finally {
     await signOut(secondaryAuth).catch(() => {});

@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-7d3ee283'], (function (workbox) { 'use strict';
+define(['./workbox-e82df9a2'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -81,6 +81,15 @@ define(['./workbox-7d3ee283'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }], {});
   workbox.cleanupOutdatedCaches();
+  workbox.registerRoute(({
+    request
+  }) => request.mode === "navigate" || request.destination === "document", new workbox.NetworkFirst({
+    "cacheName": "safra-pages-cache",
+    "networkTimeoutSeconds": 4,
+    plugins: [new workbox.CacheableResponsePlugin({
+      statuses: [200]
+    })]
+  }), 'GET');
   workbox.registerRoute(/^https:\/\/fonts\.googleapis\.com\/.*/i, new workbox.CacheFirst({
     "cacheName": "google-fonts-cache",
     plugins: [new workbox.ExpirationPlugin({

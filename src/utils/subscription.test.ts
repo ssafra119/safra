@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   normalizePhone,
   phoneToAuthEmail,
+  toFirebaseAuthPassword,
   generateSixDigitPin,
   isSubscriptionActive,
   getRemainingDays,
@@ -21,6 +22,15 @@ test('normalizePhone and phoneToAuthEmail clean Kurdish/Arabic digits and format
   assert.equal(normalizePhone('٠٧٥٠ ٧١٠ ٠٢٣٨'), '07507100238');
   assert.equal(phoneToAuthEmail('0750 710 0238'), '07507100238@safra.app');
   assert.equal(phoneToAuthEmail(''), '');
+});
+
+test('toFirebaseAuthPassword wraps short secrets like "1" and preserves >= 6 char secrets', () => {
+  assert.equal(toFirebaseAuthPassword('1'), 'safra#1');
+  assert.equal(toFirebaseAuthPassword('١'), 'safra#1');
+  assert.equal(toFirebaseAuthPassword('1234'), 'safra#1234');
+  assert.equal(toFirebaseAuthPassword('123456'), '123456');
+  assert.equal(toFirebaseAuthPassword('safra2025'), 'safra2025');
+  assert.equal(toFirebaseAuthPassword(''), '');
 });
 
 test('generateSixDigitPin generates 6-digit numeric strings', () => {
@@ -131,13 +141,14 @@ test('filterUserAccounts filters by search query and account status', () => {
   assert.equal(filterUserAccounts(accounts, '0750777', 'all', now)[0].uid, 'u3');
 });
 
-test('company admin username normalization and validation helpers work strictly', () => {
+test('company admin username normalization and validation helpers work cleanly', () => {
   assert.equal(normalizeAdminUsername(' Safra_Admin 12 '), 'safra_admin12');
   assert.equal(adminUsernameToEmail('Safra'), 'safra@admin.safra.app');
   assert.equal(adminUsernameToEmail('ab'), '');
 
   assert.equal(validateCompanyAdminCredentials('ab', '123456').valid, false);
-  assert.equal(validateCompanyAdminCredentials('safra', '12345').valid, false);
+  assert.equal(validateCompanyAdminCredentials('safra', '').valid, false);
+  assert.equal(validateCompanyAdminCredentials('safra', '1').valid, true);
   assert.deepEqual(validateCompanyAdminCredentials('Safra', '123456'), {
     valid: true,
     cleanUsername: 'safra',
