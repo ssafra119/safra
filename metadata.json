@@ -1,0 +1,8 @@
+{
+  "name": "Safra Wholesale Catalog",
+  "description": "سەفرا - کەتەلۆگێ فرۆشتنێ و کۆنتڕۆلا کومگەهێ بۆ بەرهەمێن شیرەمەنی، سناکس، و کەرەستەیێن پاقژکرنێ",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

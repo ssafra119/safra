@@ -1,0 +1,179 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper primitives
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Verified bootstrapped owner account
+    function isBootstrappedSuperAdmin() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'omedrekani128@gmail.com';
+    }
+
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isBootstrappedSuperAdmin()
+        || (isSignedIn()
+            && userDocExists()
+            && userDoc().role == 'superadmin'
+            && userDoc().active == true
+            && userDoc().expiresAt > request.time);
+    }
+
+    function isAdminOrSuperAdmin() {
+      return isBootstrappedSuperAdmin()
+        || (isSignedIn()
+            && userDocExists()
+            && (userDoc().role == 'admin' || userDoc().role == 'superadmin')
+            && userDoc().active == true
+            && userDoc().expiresAt > request.time)
+        || (isSignedIn()
+            && request.auth.token.email_verified == true
+            && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isActiveSubscriber() {
+      return isBootstrappedSuperAdmin()
+        || (isSignedIn()
+            && userDocExists()
+            && userDoc().active == true
+            && userDoc().expiresAt > request.time);
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['title', 'category', 'piecesPerCarton', 'piecePrice', 'cartonPrice', 'stockCartons', 'stockPieces'])
+        && data.keys().hasOnly(['title', 'category', 'images', 'piecesPerCarton', 'piecePrice', 'cartonPrice', 'stockCartons', 'stockPieces', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 100
+        && data.piecesPerCarton is number && data.piecesPerCarton > 0
+        && data.piecePrice is number && data.piecePrice >= 0
+        && data.cartonPrice is number && data.cartonPrice >= 0
+        && data.stockCartons is number && data.stockCartons >= 0
+        && data.stockPieces is number && data.stockPieces >= 0
+        && (!('images' in data) || (data.images is list && data.images.size() <= 20 && (data.images.size() == 0 || data.images[0] is string)))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64) || data.createdAt is timestamp)
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64) || data.updatedAt is timestamp);
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['id', 'name'])
+        && data.keys().hasOnly(['id', 'name', 'icon', 'order'])
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 64
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && (!('icon' in data) || (data.icon is string && data.icon.size() <= 32))
+        && (!('order' in data) || data.order is number);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'phone', 'role', 'active', 'expiresAt', 'createdAt'])
+        && data.keys().hasOnly(['name', 'phone', 'notes', 'role', 'active', 'expiresAt', 'deviceId', 'createdAt', 'lastLoginAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 120
+        && data.phone is string && data.phone.size() >= 3 && data.phone.size() <= 30
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 300))
+        && data.role in ['rep', 'admin', 'superadmin']
+        && data.active is bool
+        && data.expiresAt is timestamp
+        && (!('deviceId' in data) || data.deviceId == null || (data.deviceId is string && data.deviceId.size() <= 128))
+        && data.createdAt is timestamp
+        && (!('lastLoginAt' in data) || data.lastLoginAt == null || data.lastLoginAt is timestamp);
+    }
+
+    // Catalog Products: readable only by active unexpired subscribers or admins
+    match /products/{productId} {
+      allow get: if isSignedIn() && isValidId(productId) && (isActiveSubscriber() || isAdminOrSuperAdmin());
+      allow list: if isSignedIn() && (isActiveSubscriber() || isAdminOrSuperAdmin());
+      allow create: if isSignedIn() && isValidId(productId) && isValidProduct(incoming()) && isAdminOrSuperAdmin();
+      allow update: if isSignedIn() && isValidId(productId) && isValidProduct(incoming()) && isAdminOrSuperAdmin();
+      allow delete: if isSignedIn() && isValidId(productId) && isAdminOrSuperAdmin();
+    }
+
+    // Categories: readable only by active unexpired subscribers or admins
+    match /categories/{categoryId} {
+      allow get: if isSignedIn() && isValidId(categoryId) && (isActiveSubscriber() || isAdminOrSuperAdmin());
+      allow list: if isSignedIn() && (isActiveSubscriber() || isAdminOrSuperAdmin());
+      allow create: if isSignedIn() && isValidId(categoryId) && isValidCategory(incoming()) && isAdminOrSuperAdmin();
+      allow update: if isSignedIn() && isValidId(categoryId) && isValidCategory(incoming()) && isAdminOrSuperAdmin();
+      allow delete: if isSignedIn() && isValidId(categoryId) && isAdminOrSuperAdmin();
+    }
+
+    // Users (Subscriptions, Roles, and Single-Device Lock)
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isSuperAdmin());
+      allow list: if isSignedIn() && isSuperAdmin();
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().createdAt == request.time
+        && (
+          isSuperAdmin()
+          || (isBootstrappedSuperAdmin() && request.auth.uid == userId && incoming().role == 'superadmin')
+        );
+      allow update: if isSignedIn()
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().createdAt == existing().createdAt
+        && (
+          isSuperAdmin()
+          || (
+            request.auth.uid == userId
+            && existing().role == 'admin'
+            && incoming().role == existing().role
+            && incoming().active == existing().active
+            && incoming().expiresAt == existing().expiresAt
+            && incoming().phone == existing().phone
+            && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'lastLoginAt'])
+          )
+          || (
+            request.auth.uid == userId
+            && incoming().role == existing().role
+            && incoming().active == existing().active
+            && incoming().expiresAt == existing().expiresAt
+            && incoming().name == existing().name
+            && incoming().phone == existing().phone
+            && incoming().diff(existing()).affectedKeys().hasOnly(['deviceId', 'lastLoginAt'])
+            && (
+              ((!('deviceId' in existing()) || existing().deviceId == null || existing().deviceId == '')
+                && incoming().deviceId is string
+                && incoming().deviceId.size() > 0)
+              || (existing().deviceId is string && incoming().deviceId == existing().deviceId)
+            )
+          )
+        );
+      allow delete: if isSignedIn() && isValidId(userId) && isSuperAdmin();
+    }
+
+    // Legacy Admins registry
+    match /admins/{adminId} {
+      allow read: if isAdminOrSuperAdmin();
+      allow write: if isSuperAdmin() && isValidId(adminId);
+    }
+  }
+}

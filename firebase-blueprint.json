@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Wholesale product details including pricing, packaging, and stock",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 100 },
+        "images": { "type": "array", "description": "Array of image URLs or base64 data URLs" },
+        "piecesPerCarton": { "type": "number", "description": "Number of pieces per carton" },
+        "piecePrice": { "type": "number", "description": "Single piece price in IQD" },
+        "cartonPrice": { "type": "number", "description": "Total carton price in IQD" },
+        "stockCartons": { "type": "number", "description": "Remaining stock in cartons" },
+        "stockPieces": { "type": "number", "description": "Remaining stock in loose pieces" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "category", "piecesPerCarton", "piecePrice", "cartonPrice", "stockCartons", "stockPieces"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product category / department classification with custom emoji",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 100 },
+        "icon": { "type": "string", "maxLength": 32 },
+        "order": { "type": "number", "description": "Sequence ordering number" }
+      },
+      "required": ["id", "name"]
+    },
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Sales rep, admin, or superadmin account with subscription expiry and single-device lock",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "role": { "type": "string", "enum": ["rep", "admin", "superadmin"] },
+        "active": { "type": "boolean" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "deviceId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone", "role", "active", "expiresAt", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Legacy administrator whitelist",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "superadmin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Wholesale catalog products collection"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Product categories in sequence order"
+    },
+    "/users/{userId}": {
+      "schema": "UserAccount",
+      "description": "User subscription, role, and single-device binding collection"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "System admin whitelist"
+    }
+  }
+}
